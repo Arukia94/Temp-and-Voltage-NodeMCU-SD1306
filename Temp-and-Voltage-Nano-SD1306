@@ -1,7 +1,8 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include "Poppins_SemiBold18pt7b.h"  // Include the custom Poppins SemiBold font
+#include "Poppins_SemiBold18pt7b.h"  // Include the Poppins SemiBold 18pt font
+#include "Poppins_SemiBold8pt7b.h"   // Include the Poppins SemiBold 8pt font
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -14,11 +15,13 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define R1 29850.0        // Resistor R1 in the divider (in ohms)
 #define R2 7500.0         // Resistor R2 in the divider (in ohms)
 
-// Calibration parameter
-float calibrationFactor = 0.91; // Calibration factor for the sensor
+// Calibration parameters
+float calibrationFactor1 = 0.91; // Calibration factor for sensor 1
+float calibrationFactor2 = 0.91; // Calibration factor for sensor 2
 
-// Analog input pin for the sensor
-#define SENSOR_PIN A0     // Analog input for the voltage sensor
+// Analog input pins for sensors
+#define SENSOR1_PIN A0     // Analog input for the first voltage sensor
+#define SENSOR2_PIN A1     // Analog input for the second voltage sensor
 
 void setup() {
   Serial.begin(115200);
@@ -34,38 +37,52 @@ void setup() {
 }
 
 void loop() {
-  // Read raw ADC value
-  int adcValue = analogRead(SENSOR_PIN);
+  // Read raw ADC values
+  int adcValue1 = analogRead(SENSOR1_PIN);
+  int adcValue2 = analogRead(SENSOR2_PIN);
 
-  // Convert ADC value to voltage (scaled for divider)
-  float rawVoltage = (adcValue / ADC_MAX) * VREF * ((R1 + R2) / R2);
+  // Convert ADC values to voltages (scaled for divider)
+  float rawVoltage1 = (adcValue1 / ADC_MAX) * VREF * ((R1 + R2) / R2);
+  float rawVoltage2 = (adcValue2 / ADC_MAX) * VREF * ((R1 + R2) / R2);
 
-  // Apply calibration adjustment
-  float calibratedVoltage = rawVoltage * calibrationFactor;
+  // Apply calibration adjustments
+  float calibratedVoltage1 = rawVoltage1 * calibrationFactor1;
+  float calibratedVoltage2 = rawVoltage2 * calibrationFactor2;
 
   // Clear the display
   display.clearDisplay();
 
-  // Set custom Poppins SemiBold font
-  display.setFont(&Poppins_SemiBold18pt7b); // Use the Poppins SemiBold font
-
-  // Display voltage
+  // Set font and display voltage for Sensor 1 (Top of OLED)
+  display.setFont(&Poppins_SemiBold8pt7b); // Use smaller font for Sensor 1
   int16_t x1, y1;
   uint16_t w, h;
-  String voltageText = String(calibratedVoltage, 2) + "V";
-  display.getTextBounds(voltageText, 0, 0, &x1, &y1, &w, &h);
-  display.setCursor((SCREEN_WIDTH - w) / 2, (SCREEN_HEIGHT + h) / 2); // Centered on the screen
-  display.print(voltageText);
+  String voltageText1 = String(calibratedVoltage1, 2) + " V"; // Add space before 'V'
+  display.getTextBounds(voltageText1, 0, 0, &x1, &y1, &w, &h);
+  display.setCursor((SCREEN_WIDTH - w) / 2, 10); // Centered horizontally, near top
+  display.print(voltageText1);
+
+  // Set font and display value for Sensor 2 (Bottom of OLED)
+  display.setFont(&Poppins_SemiBold18pt7b); // Use larger font for Sensor 2
+  String voltageText2 = String(calibratedVoltage2, 2) + " \xB0" + "C"; // Degree symbol (0xB0) added
+  display.getTextBounds(voltageText2, 0, 0, &x1, &y1, &w, &h);
+  display.setCursor((SCREEN_WIDTH - w) / 2, 50); // Centered horizontally, near bottom
+  display.print(voltageText2);
 
   // Show the content on OLED
   display.display();
 
-  // Print raw and calibrated voltage to Serial Monitor for debugging
-  Serial.print("Raw Voltage: ");
-  Serial.print(rawVoltage);
+  // Print raw and calibrated values to Serial Monitor for debugging
+  Serial.print("Sensor 1 -> Raw Voltage: ");
+  Serial.print(rawVoltage1);
   Serial.print(" V, Calibrated Voltage: ");
-  Serial.print(calibratedVoltage);
+  Serial.print(calibratedVoltage1);
   Serial.println(" V");
+
+  Serial.print("Sensor 2 -> Raw Voltage: ");
+  Serial.print(rawVoltage2);
+  Serial.print(" V, Calibrated Voltage: ");
+  Serial.print(calibratedVoltage2);
+  Serial.println(" °C");
 
   delay(1000);  // Update every second
 }
