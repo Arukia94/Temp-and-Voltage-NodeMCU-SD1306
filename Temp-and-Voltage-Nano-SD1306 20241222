@@ -17,7 +17,6 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // Calibration parameters
 float calibrationFactor1 = 0.9; // Calibration factor for sensor 1
-float calibrationFactor2 = 0.9; // Calibration factor for sensor 2
 
 // Analog input pins for sensors
 #define SENSOR1_PIN A0     // Analog input for the first voltage sensor
@@ -43,11 +42,10 @@ void loop() {
 
   // Convert ADC values to voltages (scaled for divider)
   float rawVoltage1 = (adcValue1 / ADC_MAX) * VREF * ((R1 + R2) / R2);
-  float rawVoltage2 = (adcValue2 / ADC_MAX) * VREF * ((R1 + R2) / R2);
-
-  // Apply calibration adjustments
   float calibratedVoltage1 = rawVoltage1 * calibrationFactor1;
-  float calibratedVoltage2 = rawVoltage2 * calibrationFactor2;
+
+  // Apply temperature equation for Sensor 2
+  float tempValue = -1.2831571326533118 * adcValue2 + 109.18248642805679;
 
   // Clear the display
   display.clearDisplay();
@@ -56,34 +54,44 @@ void loop() {
   display.setFont(&AvenirLTStd_Heavy10pt7b); // Use new font for Sensor 1
   int16_t x1, y1;
   uint16_t w, h;
-  String voltageText1 = String(calibratedVoltage1, 2) + " V"; // Add space before 'V'
+  String voltageText1 = String(calibratedVoltage1, 1) + " V"; // Add space before 'V'
   display.getTextBounds(voltageText1, 0, 0, &x1, &y1, &w, &h);
-  display.setCursor((SCREEN_WIDTH - w) / 2, 10); // Centered horizontally, near top
+  display.setCursor((SCREEN_WIDTH - w) / 2, 15); // Centered horizontally, near top
   display.print(voltageText1);
 
-  // Set font and display integer value for Sensor 2 (Bottom of OLED)
+  // Set font and display temperature value for Sensor 2 (Bottom of OLED)
   display.setFont(&AvenirLTStd_Heavy24pt7b); // Use new font for Sensor 2
-  int calibratedVoltage2Int = round(calibratedVoltage2); // Convert to integer
-  String voltageText2 = String(calibratedVoltage2Int) + " \xB0" + "C"; // Degree symbol (0xB0) added
-  display.getTextBounds(voltageText2, 0, 0, &x1, &y1, &w, &h);
+  int tempValueInt = round(tempValue); // Convert to integer for display
+  String tempText = String(tempValueInt); // Temperature text without "C"
+  display.getTextBounds(tempText, 0, 0, &x1, &y1, &w, &h);
   display.setCursor((SCREEN_WIDTH - w) / 2, 50); // Centered horizontally, near bottom
-  display.print(voltageText2);
+  display.print(tempText);
+
+  // Display the dot with larger font
+  display.setFont(&AvenirLTStd_Heavy24pt7b); // Use larger font for the dot
+  display.setCursor((SCREEN_WIDTH - w) / 2 + w + 8, 25); // Position right after the temperature
+  display.print(".");
+
+  // Display the "C" with smaller font
+  display.setFont(&AvenirLTStd_Heavy10pt7b); // Use smaller font for "C"
+  display.setCursor((SCREEN_WIDTH - w) / 2 + w + 20, 30); // Adjust position after the dot
+  display.print("C");
 
   // Show the content on OLED
   display.display();
 
-  // Print raw and calibrated values to Serial Monitor for debugging
+  // Print raw and calculated values to Serial Monitor for debugging
   Serial.print("Sensor 1 -> Raw Voltage: ");
   Serial.print(rawVoltage1);
   Serial.print(" V, Calibrated Voltage: ");
   Serial.print(calibratedVoltage1);
   Serial.println(" V");
 
-  Serial.print("Sensor 2 -> Raw Voltage: ");
-  Serial.print(rawVoltage2);
-  Serial.print(" V, Calibrated Voltage (Integer): ");
-  Serial.print(calibratedVoltage2Int);
-  Serial.println(" °C");
+  Serial.print("Sensor 2 -> ADC Value: ");
+  Serial.print(adcValue2);
+  Serial.print(", Calculated Temp: ");
+  Serial.print(tempValue);
+  Serial.println(" ° \xB0C");
 
   delay(1000);  // Update every second
 }
